@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ContractSchema, Extraction, FieldType } from "./schema";
+import { ContractSchema, Extraction } from "./schema";
 import { chunkText, estimateTokens } from "./chunk";
 
 const SYSTEM_PROMPT = `You are a contracts extraction agent. Your only job is to find and return EXACT QUOTES for specific legal terms from the provided contract text. 
@@ -12,7 +12,7 @@ Rules:
 - Provide a 0..1 confidence score based on how directly the clause answers the field.
 - Never invent page numbers; if page markers are not present in the input, set page to null.`;
 
-function buildUserPrompt(chunkText: string, fields?: FieldType[]): string {
+function buildUserPrompt(chunkText: string, fields?: string[]): string {
   const fieldList = fields || [
     "Sales tax",
     "Shipping",
@@ -47,7 +47,7 @@ export async function extractFromChunk({
   client: OpenAI;
   model: string;
   chunkText: string;
-  fields?: FieldType[];
+  fields?: string[];
 }): Promise<{ extractions: Extraction[]; inputTokens: number; outputTokens: number }> {
   try {
     const response = await client.chat.completions.create({
@@ -89,7 +89,7 @@ export async function extractFromDocument({
   client: OpenAI;
   model: string;
   documentText: string;
-  fields?: FieldType[];
+  fields?: string[];
 }): Promise<{ extractions: Extraction[][]; totalInputTokens: number; totalOutputTokens: number }> {
   const chunks = chunkText(documentText);
   
