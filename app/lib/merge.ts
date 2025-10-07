@@ -1,4 +1,4 @@
-import { Extraction, FieldType } from "./schema";
+import { Extraction } from "./schema";
 
 export function mergeExtractions(
   allExtractions: Extraction[][],
@@ -6,7 +6,7 @@ export function mergeExtractions(
   pages: number[] // Now offsets instead of text
 ): Extraction[] {
   // Group by field
-  const byField = new Map<FieldType, Extraction[]>();
+  const byField = new Map<string, Extraction[]>();
   
   for (const extractionSet of allExtractions) {
     for (const extraction of extractionSet) {
@@ -18,16 +18,8 @@ export function mergeExtractions(
   
   const result: Extraction[] = [];
   
-  // All possible fields
-  const allFields: FieldType[] = [
-    "sales_tax",
-    "shipping",
-    "cancellation_policy",
-    "renewal_terms",
-    "discounts",
-    "ramp_up",
-    "payment"
-  ];
+  // Get all unique field names from the extractions
+  const allFields = Array.from(byField.keys());
   
   for (const field of allFields) {
     const candidates = byField.get(field) || [];
