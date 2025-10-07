@@ -1,0 +1,93 @@
+SOFTWARE LICENSE AND SERVICE AGREEMENT
+
+This Software License and Service Agreement ("Agreement") is entered into as of January 1, 2025 ("Effective Date"), by and between TechCorp Inc., a Delaware corporation with its principal place of business at 123 Tech Street, San Francisco, CA 94102 ("Licensor"), and CustomerCo LLC, a California limited liability company with its principal place of business at 456 Business Ave, Los Angeles, CA 90012 ("Licensee").
+
+WHEREAS, Licensor owns and operates certain proprietary software products and services; and
+
+WHEREAS, Licensee desires to license and use such software products and services subject to the terms and conditions set forth herein;
+
+NOW, THEREFORE, in consideration of the mutual covenants and agreements set forth herein, the parties agree as follows:
+
+1. LICENSE GRANT
+
+Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a non-exclusive, non-transferable license to use the Software for Licensee's internal business purposes during the Term.
+
+2. FEES AND PAYMENT
+
+2.1 License Fees. Licensee shall pay Licensor an annual license fee of $50,000 USD per year, payable in quarterly installments of $12,500 USD each. The first payment shall be due within thirty (30) days of the Effective Date, and subsequent payments shall be due on the first day of each calendar quarter thereafter.
+
+2.2 Payment Terms. All payments shall be made via wire transfer or ACH to the account specified by Licensor. Payment terms are Net 30 from invoice date. Late payments will incur a late fee of 1.5% per month on the outstanding balance.
+
+2.3 Taxes. All fees are exclusive of taxes. Licensee shall be responsible for and shall pay all sales, use, excise, value-added, personal property, or other taxes, fees, duties, or similar charges (collectively, "Taxes") imposed by any governmental authority on the transactions contemplated by this Agreement, excluding only taxes based on Licensor's net income.
+
+3. SHIPPING AND DELIVERY
+
+3.1 Software Delivery. The Software will be delivered electronically via download link within five (5) business days of payment receipt. Licensor shall provide download credentials to Licensee's designated technical contact.
+
+3.2 Hardware. If Licensee orders any physical hardware or equipment in connection with the Software, all shipping costs shall be borne by Licensee. Licensor will use standard ground shipping unless Licensee requests expedited shipping at Licensee's expense. Risk of loss passes to Licensee upon delivery to the common carrier.
+
+4. TERM AND TERMINATION
+
+4.1 Initial Term. The initial term of this Agreement shall be twelve (12) months from the Effective Date ("Initial Term").
+
+4.2 Renewal. Upon expiration of the Initial Term, this Agreement shall automatically renew for successive twelve (12) month periods (each, a "Renewal Term") unless either party provides written notice of non-renewal at least sixty (60) days prior to the end of the then-current term. The license fees for each Renewal Term shall increase by five percent (5%) over the prior term unless otherwise agreed in writing by the parties.
+
+4.3 Termination for Cause. Either party may terminate this Agreement for cause upon written notice if the other party materially breaches this Agreement and fails to cure such breach within thirty (30) days of receiving written notice thereof.
+
+4.4 Termination for Convenience. Licensee may terminate this Agreement for convenience upon ninety (90) days' prior written notice to Licensor. In such event, Licensee shall pay all fees due through the end of the notice period, and no refund shall be provided for any prepaid fees for periods beyond the termination date.
+
+5. CANCELLATION AND REFUND POLICY
+
+5.1 Cancellation Right. Licensee may cancel this Agreement within fourteen (14) days of the Effective Date for a full refund of any fees paid, provided that Licensee has not accessed or used the Software during such period.
+
+5.2 No Refund After Use. Except as provided in Section 5.1, all fees are non-refundable. If Licensee terminates this Agreement after the fourteen-day cancellation period, Licensee shall not be entitled to a refund or credit for any unused portion of the license term.
+
+6. DISCOUNTS AND PROMOTIONS
+
+6.1 Volume Discount. If Licensee purchases licenses for more than one hundred (100) users, Licensee shall be entitled to a fifteen percent (15%) discount on the annual license fee.
+
+6.2 Multi-Year Discount. If Licensee commits to a three-year term at the time of initial execution, Licensee shall receive a ten percent (10%) discount on the annual license fee for each year of the three-year period.
+
+6.3 Non-Cumulative. Discounts are not cumulative unless expressly agreed in writing by Licensor. Only one discount may be applied to any transaction.
+
+7. IMPLEMENTATION AND RAMP-UP
+
+7.1 Implementation Services. Licensor shall provide standard implementation services at no additional charge during the first ninety (90) days following the Effective Date ("Ramp-Up Period"). Such services include initial configuration, data migration assistance, and up to forty (40) hours of training for Licensee's personnel.
+
+7.2 Ramp-Up Schedule. During the Ramp-Up Period, Licensee's usage will be gradually increased according to the following schedule: 0-30 days (up to 25% of licensed capacity), 31-60 days (up to 50% of licensed capacity), 61-90 days (up to 75% of licensed capacity), and full capacity thereafter.
+
+7.3 Additional Services. Any implementation services required beyond the standard services described in Section 7.1 shall be provided at Licensor's then-current professional services rates.
+
+8. SUPPORT AND MAINTENANCE
+
+8.1 Support. Licensor shall provide email and phone support during regular business hours (9:00 AM to 5:00 PM Pacific Time, Monday through Friday, excluding holidays) at no additional charge.
+
+8.2 Updates. Licensor shall provide all Software updates, patches, and bug fixes at no additional charge during the Term.
+
+9. CONFIDENTIALITY
+
+Each party agrees to maintain the confidentiality of all Confidential Information disclosed by the other party and to use such Confidential Information solely for the purposes of performing its obligations under this Agreement.
+
+10. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL EITHER PARTY'S TOTAL LIABILITY ARISING OUT OF OR RELATED TO THIS AGREEMENT EXCEED THE TOTAL AMOUNT OF FEES PAID BY LICENSEE TO LICENSOR IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO LIABILITY.
+
+11. GENERAL PROVISIONS
+
+11.1 Governing Law. This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflicts of law principles.
+
+11.2 Entire Agreement. This Agreement constitutes the entire agreement between the parties with respect to the subject matter hereof and supersedes all prior agreements and understandings, whether written or oral.
+
+11.3 Amendment. This Agreement may be amended only by a written instrument signed by both parties.
+
+11.4 Notices. All notices under this Agreement shall be in writing and delivered by email, certified mail, or overnight courier to the addresses set forth above.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date.
+
+TECHCORP INC.                          CUSTOMERCO LLC
+
+By: ________________________           By: ________________________
+Name: Sarah Johnson                     Name: Michael Chen
+Title: Chief Executive Officer          Title: Chief Technology Officer
+Date: January 1, 2025                   Date: January 1, 2025
+
