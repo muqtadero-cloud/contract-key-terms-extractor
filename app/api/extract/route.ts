@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       : fullText;
     
     const client = getOpenAIClient();
-    const model = modelParam || "gpt-4o";
+    const model = modelParam || "o3-mini";
     
     // Build dynamic prompt with field descriptions
     const fieldsToExtract = customFields || [
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         type: "json_schema",
         json_schema: ContractSchema
       },
-      temperature: 0.1,
+      temperature: 0,
     });
     
     const content = response.choices[0]?.message?.content;
