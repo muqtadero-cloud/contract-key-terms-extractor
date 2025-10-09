@@ -55,7 +55,10 @@ export default function UploadCard({
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldDescription, setNewFieldDescription] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isParsingFields, setIsParsingFields] = useState(false);
+  const [fieldsFileName, setFieldsFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fieldsFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -132,6 +135,47 @@ export default function UploadCard({
 
   const handleRemoveFile = (index: number) => {
     setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+  };
+
+  const handleFieldsFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingFields(true);
+    setFieldsFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/parse-fields', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse fields file');
+      }
+
+      const data = await response.json();
+      
+      if (data.fields && data.fields.length > 0) {
+        setCustomFields(data.fields);
+        alert(`✓ Successfully loaded ${data.fields.length} key terms from ${file.name}`);
+      } else {
+        throw new Error('No fields found in the file');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to parse fields file';
+      alert(`Error: ${message}`);
+      setFieldsFileName(null);
+    } finally {
+      setIsParsingFields(false);
+      if (fieldsFileInputRef.current) {
+        fieldsFileInputRef.current.value = '';
+      }
+    }
   };
 
   return (
@@ -242,11 +286,69 @@ export default function UploadCard({
       {/* Advanced Options */}
       {showAdvanced && (
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          {/* Upload Key Terms File */}
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-sm font-semibold text-blue-900 mb-2">📄 Quick Load Key Terms</h3>
+            <p className="text-xs text-blue-800 mb-3">
+              Upload an Excel (.xlsx), Word (.docx), or text file with your key terms and descriptions. 
+              The system will automatically parse them using AI.
+            </p>
+            
+            <input
+              ref={fieldsFileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.docx,.txt"
+              onChange={handleFieldsFileSelect}
+              disabled={isParsingFields}
+              className="hidden"
+              id="fields-file-upload"
+            />
+            
+            <label
+              htmlFor="fields-file-upload"
+              className={`flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md cursor-pointer transition-colors ${
+                isParsingFields
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {isParsingFields ? (
+                <>
+                  <Spinner size="sm" />
+                  Parsing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Upload Key Terms File
+                </>
+              )}
+            </label>
+            
+            {fieldsFileName && (
+              <p className="text-xs text-green-700 mt-2">
+                ✓ Loaded from: {fieldsFileName}
+              </p>
+            )}
+            
+            <details className="mt-3">
+              <summary className="text-xs text-blue-700 cursor-pointer hover:text-blue-800">
+                Supported file formats
+              </summary>
+              <ul className="text-xs text-blue-700 mt-2 ml-4 list-disc space-y-1">
+                <li><strong>Excel:</strong> Column 1 = Term Name, Column 2 = Description</li>
+                <li><strong>Word/Text:</strong> Numbered or bulleted list with term names and descriptions</li>
+              </ul>
+            </details>
+          </div>
+
           {/* Custom Fields */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-gray-700">
-                Key Terms to Extract
+                Key Terms to Extract ({customFields.length})
               </label>
               <button
                 onClick={handleResetFields}
