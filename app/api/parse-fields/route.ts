@@ -95,7 +95,6 @@ async function parseWithLLM(text: string): Promise<KeyTermField[]> {
       }
     ],
     response_format: { type: "json_object" },
-    temperature: 0,
   });
   
   const content = response.choices[0]?.message?.content;
