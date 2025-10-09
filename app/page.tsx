@@ -6,6 +6,11 @@ import FieldCard from "./components/FieldCard";
 import { ApiResponse, Extraction } from "./lib/schema";
 import * as XLSX from 'xlsx';
 
+type KeyTermField = {
+  name: string;
+  description: string;
+};
+
 type BulkResult = {
   fileName: string;
   success: boolean;
@@ -26,7 +31,7 @@ export default function Home() {
     setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
-  const handleExtract = async (file: File, model: string, customFields?: string[], customInstructions?: string) => {
+  const handleExtract = async (file: File, model: string, customFields?: KeyTermField[]) => {
     setIsProcessing(true);
     setError(null);
     setLogs([]);
@@ -46,11 +51,6 @@ export default function Home() {
       if (customFields && customFields.length > 0) {
         formData.append("fields", JSON.stringify(customFields));
         addLog(`Extracting ${customFields.length} custom key terms`);
-      }
-      
-      if (customInstructions && customInstructions.trim()) {
-        formData.append("instructions", customInstructions);
-        addLog("Using custom instructions");
       }
 
       addLog(`Sending to API with model ${model}...`);
@@ -81,7 +81,7 @@ export default function Home() {
     }
   };
 
-  const handleBulkExtract = async (files: File[], model: string, customFields?: string[], customInstructions?: string) => {
+  const handleBulkExtract = async (files: File[], model: string, customFields?: KeyTermField[]) => {
     setIsProcessing(true);
     setError(null);
     setLogs([]);
@@ -104,10 +104,6 @@ export default function Home() {
         
         if (customFields && customFields.length > 0) {
           formData.append("fields", JSON.stringify(customFields));
-        }
-        
-        if (customInstructions && customInstructions.trim()) {
-          formData.append("instructions", customInstructions);
         }
 
         const response = await fetch("/api/extract", {

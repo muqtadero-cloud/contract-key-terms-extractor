@@ -9,23 +9,14 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and return the EXACT VERBATIM text as it appears in the document.
+const BASE_SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and return the EXACT VERBATIM text as it appears in the document.
 
 CRITICAL RULES:
 1. Copy text EXACTLY as written - do not paraphrase, summarize, or rewrite
 2. Include ALL relevant sentences and clauses for each term
 3. If a term spans multiple sentences or paragraphs, include the complete section
 4. If a term is not found, mark status as "not_found"
-5. Be thorough - err on the side of including more context rather than less
-
-Terms to extract:
-- Sales tax: Any clauses about tax responsibilities, exemptions, or obligations
-- Shipping: Delivery terms, shipping responsibilities, freight costs
-- Cancellation policy: Termination clauses, cancellation procedures, notice periods
-- Renewal terms: Auto-renewal clauses, renewal processes, term extensions
-- Discounts: Price reductions, promotional terms, volume discounts
-- Ramp up: Implementation schedules, onboarding timelines, phase-in periods
-- Payment: Payment terms, schedules, amounts, invoicing procedures`;
+5. Be thorough - err on the side of including more context rather than less`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +24,6 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     const modelParam = formData.get('model') as string | null;
     const fieldsParam = formData.get('fields') as string | null;
-    const instructionsParam = formData.get('instructions') as string | null;
     
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -56,8 +46,9 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Parse custom fields
-    let customFields: string[] | null = null;
+    // Parse custom fields with descriptions
+    type KeyTermField = { name: string; description: string };
+    let customFields: KeyTermField[] | null = null;
     if (fieldsParam) {
       try {
         customFields = JSON.parse(fieldsParam);
@@ -68,7 +59,7 @@ export async function POST(req: NextRequest) {
     
     console.log(`Processing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     if (customFields) {
-      console.log(`Custom fields: ${customFields.join(', ')}`);
+      console.log(`Custom fields: ${customFields.map(f => f.name).join(', ')}`);
     }
     
     // Extract text from document
@@ -89,20 +80,19 @@ export async function POST(req: NextRequest) {
     const client = getOpenAIClient();
     const model = modelParam || "gpt-4o";
     
-    // Build dynamic prompt
+    // Build dynamic prompt with field descriptions
     const fieldsToExtract = customFields || [
-      "Sales tax",
-      "Shipping",
-      "Cancellation policy",
-      "Renewal terms",
-      "Discounts",
-      "Ramp up",
-      "Payment"
+      { name: "Sales tax", description: "Any clauses about tax responsibilities, exemptions, or obligations" },
+      { name: "Shipping", description: "Delivery terms, shipping responsibilities, freight costs" },
+      { name: "Cancellation policy", description: "Termination clauses, cancellation procedures, notice periods" },
+      { name: "Renewal terms", description: "Auto-renewal clauses, renewal processes, term extensions" },
+      { name: "Discounts", description: "Price reductions, promotional terms, volume discounts" },
+      { name: "Ramp up", description: "Implementation schedules, onboarding timelines, phase-in periods" },
+      { name: "Payment", description: "Payment terms, schedules, amounts, invoicing procedures" }
     ];
     
-    const customInstructions = instructionsParam ? `\n\nADDITIONAL INSTRUCTIONS:\n${instructionsParam}` : '';
-    
-    const dynamicPrompt = `${SYSTEM_PROMPT}${customInstructions}\n\nExtract these specific terms:\n${fieldsToExtract.map(f => `- ${f}`).join('\n')}`;
+    const termsPrompt = fieldsToExtract.map(f => `- ${f.name}: ${f.description}`).join('\n');
+    const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nTerms to extract:\n${termsPrompt}`;
     
     console.log(`Sending to ${model}...`);
     

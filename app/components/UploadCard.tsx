@@ -4,9 +4,14 @@ import { useState, useRef, DragEvent } from "react";
 import Spinner from "./Spinner";
 import { formatCost } from "../lib/cost";
 
+type KeyTermField = {
+  name: string;
+  description: string;
+};
+
 type UploadCardProps = {
-  onExtract: (file: File, model: string, customFields?: string[], customInstructions?: string) => Promise<void>;
-  onBulkExtract: (files: File[], model: string, customFields?: string[], customInstructions?: string) => Promise<void>;
+  onExtract: (file: File, model: string, customFields?: KeyTermField[]) => Promise<void>;
+  onBulkExtract: (files: File[], model: string, customFields?: KeyTermField[]) => Promise<void>;
   isProcessing: boolean;
   fileName?: string;
   pageCount?: number | null;
@@ -24,14 +29,14 @@ const MODELS = [
   { value: "gpt-4o-mini", label: "gpt-4o-mini (fast, cheap)" },
 ];
 
-const DEFAULT_FIELDS = [
-  "Sales tax",
-  "Shipping",
-  "Cancellation policy",
-  "Renewal terms",
-  "Discounts",
-  "Ramp up",
-  "Payment",
+const DEFAULT_FIELDS: KeyTermField[] = [
+  { name: "Sales tax", description: "Any clauses about tax responsibilities, exemptions, or obligations" },
+  { name: "Shipping", description: "Delivery terms, shipping responsibilities, freight costs" },
+  { name: "Cancellation policy", description: "Termination clauses, cancellation procedures, notice periods" },
+  { name: "Renewal terms", description: "Auto-renewal clauses, renewal processes, term extensions" },
+  { name: "Discounts", description: "Price reductions, promotional terms, volume discounts" },
+  { name: "Ramp up", description: "Implementation schedules, onboarding timelines, phase-in periods" },
+  { name: "Payment", description: "Payment terms, schedules, amounts, invoicing procedures" },
 ];
 
 export default function UploadCard({
@@ -46,9 +51,9 @@ export default function UploadCard({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [model, setModel] = useState("gpt-4o");
   const [isDragging, setIsDragging] = useState(false);
-  const [customFields, setCustomFields] = useState<string[]>(DEFAULT_FIELDS);
-  const [newFieldInput, setNewFieldInput] = useState("");
-  const [customInstructions, setCustomInstructions] = useState("");
+  const [customFields, setCustomFields] = useState<KeyTermField[]>(DEFAULT_FIELDS);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldDescription, setNewFieldDescription] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,16 +98,20 @@ export default function UploadCard({
     }
 
     if (selectedFiles.length === 1) {
-      await onExtract(selectedFiles[0], model, customFields, customInstructions);
+      await onExtract(selectedFiles[0], model, customFields);
     } else {
-      await onBulkExtract(selectedFiles, model, customFields, customInstructions);
+      await onBulkExtract(selectedFiles, model, customFields);
     }
   };
 
   const handleAddField = () => {
-    if (newFieldInput.trim()) {
-      setCustomFields([...customFields, newFieldInput.trim()]);
-      setNewFieldInput("");
+    if (newFieldName.trim()) {
+      setCustomFields([...customFields, { 
+        name: newFieldName.trim(), 
+        description: newFieldDescription.trim() || "Extract relevant information about this term"
+      }]);
+      setNewFieldName("");
+      setNewFieldDescription("");
     }
   };
 
@@ -219,7 +228,7 @@ export default function UploadCard({
         onClick={() => setShowAdvanced(!showAdvanced)}
         className="w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center justify-between p-2 hover:bg-gray-50 rounded"
       >
-        <span>⚙️ Custom Fields & Instructions</span>
+        <span>⚙️ Customize Key Terms</span>
         <svg 
           className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} 
           fill="none" 
@@ -235,7 +244,7 @@ export default function UploadCard({
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           {/* Custom Fields */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-gray-700">
                 Key Terms to Extract
               </label>
@@ -248,58 +257,51 @@ export default function UploadCard({
             </div>
             
             {/* Current Fields */}
-            <div className="space-y-2 mb-3">
+            <div className="space-y-3 mb-4">
               {customFields.map((field, index) => (
-                <div key={index} className="flex items-center gap-2 bg-white px-3 py-2 rounded border border-gray-200">
-                  <span className="flex-1 text-sm text-gray-900">{field}</span>
-                  <button
-                    onClick={() => handleRemoveField(index)}
-                    className="text-red-500 hover:text-red-700"
-                    title="Remove field"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                <div key={index} className="bg-white p-3 rounded border border-gray-200">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-medium text-sm text-gray-900">{field.name}</span>
+                    <button
+                      onClick={() => handleRemoveField(index)}
+                      className="text-red-500 hover:text-red-700 flex-shrink-0"
+                      title="Remove field"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 italic">{field.description}</p>
                 </div>
               ))}
             </div>
 
             {/* Add New Field */}
-            <div className="flex gap-2">
+            <div className="space-y-2 p-3 bg-blue-50 rounded border border-blue-200">
+              <p className="text-xs font-medium text-blue-900 mb-2">Add New Key Term</p>
               <input
                 type="text"
-                value={newFieldInput}
-                onChange={(e) => setNewFieldInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddField()}
-                placeholder="Add new key term..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                value={newFieldName}
+                onChange={(e) => setNewFieldName(e.target.value)}
+                placeholder="Key term name (e.g., 'Updates')"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+              <textarea
+                value={newFieldDescription}
+                onChange={(e) => setNewFieldDescription(e.target.value)}
+                placeholder="Description: What to look for (e.g., 'Software update schedules, update obligations, or version maintenance clauses')"
+                rows={2}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
               <button
                 onClick={handleAddField}
-                disabled={!newFieldInput.trim()}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={!newFieldName.trim()}
+                className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                Add Key Term
               </button>
             </div>
-          </div>
-
-          {/* Custom Instructions */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Custom Instructions (Optional)
-            </label>
-            <textarea
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-              placeholder="Add specific guidance for this contract... e.g., 'Focus on sections 3-5', 'Look for early termination fees', etc."
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              These instructions will be added to the extraction prompt
-            </p>
           </div>
         </div>
       )}
