@@ -66,6 +66,7 @@ export function validateExtraction(
     ...extraction,
     status: "not_found",
     quote: "",
+    reasoning: extraction.reasoning || "Quote could not be verified in the source document",
     start: null,
     end: null,
     confidence: 0
