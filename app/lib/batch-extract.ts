@@ -215,8 +215,10 @@ export async function batchedExtract(
           field: field.name,
           status: "not_found",
           quote: "",
-          page: 0,
-          relevance: "low"
+          page: null,
+          start: null,
+          end: null,
+          confidence: 0
         });
       });
     }
