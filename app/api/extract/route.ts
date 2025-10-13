@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAIClient } from "@/app/lib/openai";
-import { ApiResponse, Extraction, ContractSchema } from "@/app/lib/schema";
+import { ApiResponse, Extraction, ContractSchema, validateExtractions, generateValidationReport } from "@/app/lib/schema";
 import { parsePDF } from "@/app/lib/pdf";
 import { parseDOCX } from "@/app/lib/docx";
-import { validateExtractions, generateValidationReport } from "@/app/lib/validate";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
