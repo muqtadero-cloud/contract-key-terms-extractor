@@ -439,7 +439,7 @@ export default function Home() {
       <footer className="border-t border-gray-200 bg-white mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p className="text-center text-sm text-gray-600">
-            Powered by OpenAI • All quotes are extracted verbatim • Default model: gpt-5
+            Powered by OpenAI • All quotes are extracted verbatim
           </p>
         </div>
       </footer>

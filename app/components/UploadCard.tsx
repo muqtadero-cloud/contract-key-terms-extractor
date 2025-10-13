@@ -24,12 +24,8 @@ type UploadCardProps = {
   logs: string[];
 };
 
-const MODELS = [
-  { value: "gpt-5", label: "gpt-5 (latest, best quality)" },
-  { value: "gpt-4o", label: "gpt-4o (reliable)" },
-  { value: "o3-mini", label: "o3-mini (reasoning)" },
-  { value: "gpt-4o-mini", label: "gpt-4o-mini (fast, cheap)" },
-];
+// Always use GPT-5 - no model selection needed
+const DEFAULT_MODEL = "gpt-5";
 
 const DEFAULT_FIELDS: KeyTermField[] = [
   { name: "Sales tax", description: "Any clauses about tax responsibilities, exemptions, or obligations" },
@@ -51,7 +47,6 @@ export default function UploadCard({
   logs,
 }: UploadCardProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [model, setModel] = useState("gpt-5");
   const [isDragging, setIsDragging] = useState(false);
   const [customFields, setCustomFields] = useState<KeyTermField[]>(DEFAULT_FIELDS);
   const [newFieldName, setNewFieldName] = useState("");
@@ -103,9 +98,9 @@ export default function UploadCard({
     }
 
     if (selectedFiles.length === 1) {
-      await onExtract(selectedFiles[0], model, customFields);
+      await onExtract(selectedFiles[0], DEFAULT_MODEL, customFields);
     } else {
-      await onBulkExtract(selectedFiles, model, customFields);
+      await onBulkExtract(selectedFiles, DEFAULT_MODEL, customFields);
     }
   };
 
@@ -248,25 +243,6 @@ export default function UploadCard({
             <p className="text-xs text-gray-400">Select multiple files for bulk processing</p>
           </div>
         )}
-      </div>
-
-      {/* Model Selector */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Model
-        </label>
-        <select
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          disabled={isProcessing}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        >
-          {MODELS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Advanced Options Toggle */}
