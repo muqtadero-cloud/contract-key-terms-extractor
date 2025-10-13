@@ -29,20 +29,29 @@ export default function FieldCard({ extraction }: { extraction: Extraction }) {
   };
 
   const isFound = extraction.status === "found" && extraction.quote.trim().length > 0;
+  const isInferred = extraction.status === "inferred";
+  const hasReasoning = extraction.reasoning && extraction.reasoning.trim().length > 0;
 
   return (
     <div
       className={`rounded-lg border p-4 ${
-        isFound
+        isFound || isInferred
           ? "bg-white border-gray-200"
           : "bg-gray-50 border-gray-200"
       }`}
     >
       <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-gray-900">
-          {formatFieldName(extraction.field)}
-        </h3>
-        {isFound && (
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-gray-900">
+            {formatFieldName(extraction.field)}
+          </h3>
+          {isInferred && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              Inferred
+            </span>
+          )}
+        </div>
+        {(isFound || isInferred) && extraction.quote.trim().length > 0 && (
           <button
             onClick={handleCopy}
             className="text-xs px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
@@ -53,13 +62,26 @@ export default function FieldCard({ extraction }: { extraction: Extraction }) {
         )}
       </div>
 
-      {isFound ? (
+      {isFound || isInferred ? (
         <>
-          <div className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
-            <p className="text-sm font-mono text-gray-800 whitespace-pre-wrap break-words">
-              {extraction.quote}
-            </p>
-          </div>
+          {extraction.quote.trim().length > 0 && (
+            <div className={`mb-3 p-3 rounded border ${
+              isInferred ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <p className="text-sm font-mono text-gray-800 whitespace-pre-wrap break-words">
+                {extraction.quote}
+              </p>
+            </div>
+          )}
+
+          {hasReasoning && (
+            <div className="mb-3 p-3 bg-blue-50 rounded border border-blue-200">
+              <p className="text-xs font-medium text-blue-900 mb-1">💡 AI Reasoning:</p>
+              <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                {extraction.reasoning}
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center gap-4 text-xs text-gray-600">
             {extraction.page !== null && (
@@ -87,11 +109,20 @@ export default function FieldCard({ extraction }: { extraction: Extraction }) {
           </div>
         </>
       ) : (
-        <div className="text-center py-6">
-          <svg className="w-12 h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-gray-500">Not found in contract</p>
+        <div className="py-4">
+          <div className="flex items-start gap-3 mb-3">
+            <svg className="w-6 h-6 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-700 mb-1">Not found in contract</p>
+              {hasReasoning && (
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                  {extraction.reasoning}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

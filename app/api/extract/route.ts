@@ -10,32 +10,47 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
 
-const BASE_SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and return the EXACT VERBATIM text as it appears in the document.
+const BASE_SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and provide detailed reasoning about your findings.
+
+EXTRACTION APPROACH:
+1. **THINK FIRST**: Before extracting, analyze where information might be located
+2. **EXPLAIN YOUR REASONING**: Always provide context about:
+   - WHERE you found the information (which section, page, table)
+   - WHY you marked it as found/inferred/not_found
+   - If N/A, explain WHY it doesn't apply to this contract type
+   - If inferred, explain your reasoning process
+   - Provide recommendations when helpful
+
+STATUS TYPES:
+- **found**: Information is explicitly stated in the document (quote it verbatim)
+- **inferred**: Information can be deduced from context (explain your logic)
+- **not_found**: Thoroughly searched everywhere and truly doesn't exist (explain what you checked)
 
 CRITICAL RULES:
-1. Copy text EXACTLY as written - do not paraphrase, summarize, or rewrite
-2. Include ALL relevant sentences and clauses for each term
-3. If a term spans multiple sentences or paragraphs, include the complete section
-4. BE AGGRESSIVE - Search the ENTIRE document thoroughly for each field
-5. Look for information in multiple places - headers, tables, signature blocks, service descriptions
-6. For dates, check signature pages, effective date sections, and service period sections
-7. For pricing, check all tables and pricing sections carefully
-8. If information is IMPLIED or can be INFERRED from context, extract it
-9. Only mark as "not_found" if you've thoroughly searched everywhere and the information truly doesn't exist
-10. Check for common synonyms - "Customer" might be "Client", "Billing" might be "Invoicing", etc.
-11. For order forms/SOWs, pricing information is usually in tables - examine ALL tables carefully
-12. Service start/end dates are often in "Term" or "Service Period" sections
-13. Edition/tier information might be in product names or discount descriptions
+1. For "found" status: Copy text EXACTLY as written - do not paraphrase
+2. For "inferred" status: Explain your reasoning (e.g., "Not explicitly stated; based on the term 'Subscription Services' and one-year term, likely annual in advance")
+3. For "not_found" status: Explain why (e.g., "N/A - this is not a Fund Admin agreement" or "Searched all sections, no termination clause found")
+4. Include ALL relevant context in your reasoning
+5. Be conversational and helpful in reasoning - imagine explaining to a colleague
+6. For N/A fields, state clearly "N/A" in the quote and explain why in reasoning
+7. Provide recommendations when appropriate (e.g., "Recommended entry: 'Addendum to MSA dated March 10, 2022'")
 
 SEARCH STRATEGY:
 - Read the ENTIRE document before deciding anything is "not_found"
-- Check tables, headers, signature blocks, and all sections
-- For pricing fields: Look in pricing tables, fee schedules, and payment sections
-- For dates: Check signature pages, effective date clauses, and term sections
-- For entity names: Check headers, signature blocks, and "parties" sections
-- For terms/conditions: Check legal terms, invoicing terms, and renewal sections
+- Check tables, headers, signature blocks, and all sections carefully
+- For pricing: Look in pricing tables, fee schedules (often in structured tables)
+- For dates: Check signature pages (DocuSign dates), effective date clauses, term sections
+- For entity names: Check headers, signature blocks, "parties" sections
+- For editions/tiers: Check product names, discount descriptions
+- Look for synonyms: "Customer"→"Client", "Billing"→"Invoicing", etc.
 
-BE THOROUGH: Your goal is to find as much information as possible. When in doubt, extract it.`;
+EXAMPLES OF GOOD REASONING:
+✓ "Found in signature section on page 2. DocuSign signature by Chris Robinson dated August 13, 2025 (countersign date)"
+✓ "Not explicitly stated; based on 'one (1) year term: August 1, 2025 – July 31, 2026' and subscription model, likely annual in advance"
+✓ "N/A - This is a Professional edition agreement. Enterprise modules only apply to Enterprise edition."
+✓ "Searched pricing table, legal terms, and all sections. No termination clause found. Contract appears to expire automatically at term end per renewal terms."
+
+BE THOROUGH AND HELPFUL: Think like ChatGPT - provide context, reasoning, and recommendations.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -124,6 +139,7 @@ export async function POST(req: NextRequest) {
           field: field.name,
           status: "found",
           quote: file.name,
+          reasoning: "Automatically extracted from uploaded filename",
           page: null,
           start: null,
           end: null,
@@ -189,6 +205,7 @@ export async function POST(req: NextRequest) {
           field: field.name,
           status: "not_found" as const,
           quote: "",
+          reasoning: "AI extraction error - unable to parse response. Please try again.",
           page: null,
           start: null,
           end: null,
@@ -233,6 +250,7 @@ export async function POST(req: NextRequest) {
             field: field.name,
             status: "not_found" as const,
             quote: "",
+            reasoning: "Both GPT-5 and gpt-4o fallback failed. Please try again.",
             page: null,
             start: null,
             end: null,
@@ -246,6 +264,7 @@ export async function POST(req: NextRequest) {
           field: field.name,
           status: "not_found" as const,
           quote: "",
+          reasoning: "API error occurred during extraction. Please try again.",
           page: null,
           start: null,
           end: null,
