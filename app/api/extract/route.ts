@@ -8,7 +8,7 @@ import { validateExtractions, generateValidationReport } from "@/app/lib/validat
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
 
 const BASE_SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and return the EXACT VERBATIM text as it appears in the document.
 

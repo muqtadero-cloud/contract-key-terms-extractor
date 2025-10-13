@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
 
 type KeyTermField = {
   name: string;
