@@ -128,12 +128,32 @@ export async function POST(req: NextRequest) {
       }
     });
     
-    console.log(`Auto-populated ${autoExtractions.length} fields, extracting ${fieldsNeedingExtraction.length} fields with ${model}`);
+    // Log what's being auto-populated
+    if (autoExtractions.length > 0) {
+      console.log(`Auto-populated fields: ${autoExtractions.map(e => e.field).join(', ')}`);
+    }
+    console.log(`Sending ${fieldsNeedingExtraction.length} fields to ${model} for extraction`);
     
-    // Build simple, clear field list
-    const fieldsList = fieldsNeedingExtraction.map((f, idx) => 
-      `${idx + 1}. ${f.name}\n   Description: ${f.description}`
-    ).join('\n\n');
+    // Build field list with FULL descriptions (no truncation)
+    const fieldsList = fieldsNeedingExtraction.map((f, idx) => {
+      return `${idx + 1}. Field Name: "${f.name}"
+   What to extract: ${f.description}`;
+    }).join('\n\n');
+    
+    // Build the complete user message
+    const userMessage = `I need you to extract these ${fieldsNeedingExtraction.length} fields from a contract document.
+
+FIELDS TO EXTRACT:
+
+${fieldsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTRACT DOCUMENT TEXT:
+
+${textToSend}`;
+    
+    console.log(`Prompt length: ${userMessage.length} characters`);
     
     let response;
     let content: string | null = null;
@@ -144,18 +164,7 @@ export async function POST(req: NextRequest) {
         model,
         messages: [
           { role: "system", content: BASE_SYSTEM_PROMPT },
-          { 
-            role: "user", 
-            content: `Extract these ${fieldsNeedingExtraction.length} fields from the contract:
-
-${fieldsList}
-
----
-
-CONTRACT DOCUMENT:
-
-${textToSend}` 
-          }
+          { role: "user", content: userMessage }
         ],
         response_format: {
           type: "json_schema",
@@ -204,18 +213,7 @@ ${textToSend}`
             model,
             messages: [
               { role: "system", content: BASE_SYSTEM_PROMPT },
-              { 
-                role: "user", 
-                content: `Extract these ${fieldsNeedingExtraction.length} fields from the contract:
-
-${fieldsList}
-
----
-
-CONTRACT DOCUMENT:
-
-${textToSend}` 
-              }
+              { role: "user", content: userMessage }
             ],
             response_format: {
               type: "json_schema",
@@ -265,11 +263,21 @@ ${textToSend}`
     // Combine auto-populated fields with model extractions
     const allExtractions = [...autoExtractions, ...modelExtractions];
     
-    console.log("Received response from OpenAI");
+    console.log(`Received ${modelExtractions.length} extractions from AI`);
+    console.log(`Total extractions (including auto-populated): ${allExtractions.length}`);
+    console.log(`Found: ${allExtractions.filter(e => e.status === 'found').length}, Inferred: ${allExtractions.filter(e => e.status === 'inferred').length}, Not found: ${allExtractions.filter(e => e.status === 'not_found').length}`);
 
     // Validate extractions against the source text
     console.log("Validating extractions against source text...");
     const validatedExtractions = validateExtractions(allExtractions, fullText);
+    
+    // Sort extractions to match original field order
+    const fieldOrder = fieldsToExtract.map(f => f.name);
+    validatedExtractions.sort((a, b) => {
+      const indexA = fieldOrder.indexOf(a.field);
+      const indexB = fieldOrder.indexOf(b.field);
+      return indexA - indexB;
+    });
 
     // Generate validation report
     const validationReport = generateValidationReport(allExtractions, validatedExtractions);
