@@ -3,6 +3,8 @@ import { getOpenAIClient } from "@/app/lib/openai";
 import { ApiResponse, Extraction, ContractSchema } from "@/app/lib/schema";
 import { parsePDF } from "@/app/lib/pdf";
 import { parseDOCX } from "@/app/lib/docx";
+import { validateExtractions, generateValidationReport } from "@/app/lib/validate";
+import { batchedExtract } from "@/app/lib/batch-extract";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
       : fullText;
     
     const client = getOpenAIClient();
-    const model = modelParam || "o3-mini";
+    const model = modelParam || "gpt-4o";
     
     // Build dynamic prompt with field descriptions
     const fieldsToExtract = customFields || [
@@ -91,60 +93,99 @@ export async function POST(req: NextRequest) {
       { name: "Payment", description: "Payment terms, schedules, amounts, invoicing procedures" }
     ];
     
-    const termsPrompt = fieldsToExtract.map(f => `- ${f.name}: ${f.description}`).join('\n');
-    const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nTerms to extract:\n${termsPrompt}`;
-    
     console.log(`Sending to ${model}...`);
     
-    // Call OpenAI with structured output
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: dynamicPrompt },
-        { 
-          role: "user", 
-          content: `Extract the key terms from this contract:\n\n${textToSend}` 
-        }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: ContractSchema
-      },
-    });
+    // Use batched extraction for better accuracy with many fields
+    const shouldUseBatching = fieldsToExtract.length > 10;
+    let allExtractions: Extraction[];
+    let inputTokens = 0;
+    let outputTokens = 0;
     
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("No response from OpenAI");
+    if (shouldUseBatching) {
+      console.log(`Using batched extraction for ${fieldsToExtract.length} fields (batches of 8)`);
+      const batchResult = await batchedExtract(client, model, textToSend, fieldsToExtract, 8);
+      allExtractions = batchResult.extractions;
+      inputTokens = batchResult.inputTokens;
+      outputTokens = batchResult.outputTokens;
+    } else {
+      console.log(`Using single-pass extraction for ${fieldsToExtract.length} fields`);
+      const termsPrompt = fieldsToExtract.map(f => `- ${f.name}: ${f.description}`).join('\n');
+      const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nTerms to extract:\n${termsPrompt}`;
+      
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: dynamicPrompt },
+          { 
+            role: "user", 
+            content: `Extract the key terms from this contract:\n\n${textToSend}` 
+          }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: ContractSchema
+        },
+        temperature: 0.1,
+      });
+      
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from OpenAI");
+      }
+      
+      const parsed = JSON.parse(content) as { extractions: Extraction[] };
+      allExtractions = parsed.extractions;
+      inputTokens = response.usage?.prompt_tokens || 0;
+      outputTokens = response.usage?.completion_tokens || 0;
     }
     
     console.log("Received response from OpenAI");
-    
-    const parsed = JSON.parse(content) as { extractions: Extraction[] };
-    
+
+    // Validate extractions against the source text
+    console.log("Validating extractions against source text...");
+    const validatedExtractions = validateExtractions(allExtractions, fullText);
+
+    // Generate validation report
+    const validationReport = generateValidationReport(allExtractions, validatedExtractions);
+
+    if (validationReport.invalidCount > 0) {
+      console.log(`Validation: ${validationReport.invalidCount} extraction(s) failed validation and were marked as not_found`);
+      console.log(`Invalid fields: ${validationReport.invalidFields.join(', ')}`);
+    } else {
+      console.log(`Validation: All ${validationReport.validCount} extraction(s) passed validation`);
+    }
+
     // Calculate usage and cost
-    const inputTokens = response.usage?.prompt_tokens || 0;
-    const outputTokens = response.usage?.completion_tokens || 0;
-    const totalTokens = response.usage?.total_tokens || 0;
-    
+    const totalTokens = inputTokens + outputTokens;
+
     // GPT-4o pricing: $2.50 per 1M input tokens, $10 per 1M output tokens
     const estimatedUSD = (inputTokens * 2.5 / 1000000) + (outputTokens * 10 / 1000000);
-    
+
     const usage = {
       inputTokens,
       outputTokens,
       totalTokens,
       estimatedUSD
     };
-    
+
+    // Build notes
+    const notes: string[] = [];
+    if (fullText.length > maxChars) {
+      notes.push("Document was truncated to fit context window");
+    }
+    if (validationReport.invalidCount > 0) {
+      notes.push(`${validationReport.invalidCount} extraction(s) failed validation and were marked as not_found`);
+    }
+
     const result: ApiResponse = {
       fileName: file.name,
       pageCount: parsedDoc.pageCount,
       model,
-      extractions: parsed.extractions,
+      extractions: validatedExtractions,
       usage,
-      notes: fullText.length > maxChars ? ["Document was truncated to fit context window"] : []
+      notes: notes.length > 0 ? notes : undefined
     };
-    
+
     return NextResponse.json(result);
     
   } catch (error) {

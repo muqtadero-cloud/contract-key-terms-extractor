@@ -13,10 +13,10 @@ export function getOpenAIClient(): OpenAI {
 }
 
 export function getDefaultModel(): string {
-  return process.env.NEXT_PUBLIC_MODEL || "o3-mini";
+  return process.env.NEXT_PUBLIC_MODEL || "gpt-4o";
 }
 
-export const SUPPORTED_MODELS = ["o3-mini", "o4-mini", "o3", "gpt-4o-mini"] as const;
+export const SUPPORTED_MODELS = ["gpt-4o", "o3-mini", "gpt-4o-mini"] as const;
 
 export function validateModel(model: string): boolean {
   return SUPPORTED_MODELS.includes(model as any);
