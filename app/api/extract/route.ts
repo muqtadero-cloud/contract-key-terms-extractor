@@ -4,7 +4,6 @@ import { ApiResponse, Extraction, ContractSchema } from "@/app/lib/schema";
 import { parsePDF } from "@/app/lib/pdf";
 import { parseDOCX } from "@/app/lib/docx";
 import { validateExtractions, generateValidationReport } from "@/app/lib/validate";
-import { batchedExtract } from "@/app/lib/batch-extract";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -17,8 +16,26 @@ CRITICAL RULES:
 1. Copy text EXACTLY as written - do not paraphrase, summarize, or rewrite
 2. Include ALL relevant sentences and clauses for each term
 3. If a term spans multiple sentences or paragraphs, include the complete section
-4. If a term is not found, mark status as "not_found"
-5. Be thorough - err on the side of including more context rather than less`;
+4. BE AGGRESSIVE - Search the ENTIRE document thoroughly for each field
+5. Look for information in multiple places - headers, tables, signature blocks, service descriptions
+6. For dates, check signature pages, effective date sections, and service period sections
+7. For pricing, check all tables and pricing sections carefully
+8. If information is IMPLIED or can be INFERRED from context, extract it
+9. Only mark as "not_found" if you've thoroughly searched everywhere and the information truly doesn't exist
+10. Check for common synonyms - "Customer" might be "Client", "Billing" might be "Invoicing", etc.
+11. For order forms/SOWs, pricing information is usually in tables - examine ALL tables carefully
+12. Service start/end dates are often in "Term" or "Service Period" sections
+13. Edition/tier information might be in product names or discount descriptions
+
+SEARCH STRATEGY:
+- Read the ENTIRE document before deciding anything is "not_found"
+- Check tables, headers, signature blocks, and all sections
+- For pricing fields: Look in pricing tables, fee schedules, and payment sections
+- For dates: Check signature pages, effective date clauses, and term sections
+- For entity names: Check headers, signature blocks, and "parties" sections
+- For terms/conditions: Check legal terms, invoicing terms, and renewal sections
+
+BE THOROUGH: Your goal is to find as much information as possible. When in doubt, extract it.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -122,51 +139,39 @@ export async function POST(req: NextRequest) {
       }
     });
     
-    console.log(`Auto-populated ${autoExtractions.length} fields, extracting ${fieldsNeedingExtraction.length} fields`);
-    console.log(`Sending to ${model}...`);
+    console.log(`Auto-populated ${autoExtractions.length} fields, extracting ${fieldsNeedingExtraction.length} fields with ${model}`);
     
-    // Use batched extraction for better accuracy with many fields
-    const shouldUseBatching = fieldsNeedingExtraction.length > 10;
-    let modelExtractions: Extraction[];
-    let inputTokens = 0;
-    let outputTokens = 0;
+    // Single-pass extraction for all fields
+    const termsPrompt = fieldsNeedingExtraction.map((f, idx) => 
+      `${idx + 1}. **${f.name}**: ${f.description}`
+    ).join('\n');
     
-    if (shouldUseBatching) {
-      console.log(`Using batched extraction for ${fieldsNeedingExtraction.length} fields (batches of 7)`);
-      const batchResult = await batchedExtract(client, model, textToSend, fieldsNeedingExtraction, 7);
-      modelExtractions = batchResult.extractions;
-      inputTokens = batchResult.inputTokens;
-      outputTokens = batchResult.outputTokens;
-    } else {
-      console.log(`Using single-pass extraction for ${fieldsNeedingExtraction.length} fields`);
-      const termsPrompt = fieldsNeedingExtraction.map(f => `- ${f.name}: ${f.description}`).join('\n');
-      const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nTerms to extract:\n${termsPrompt}`;
-      
-      const response = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: dynamicPrompt },
-          { 
-            role: "user", 
-            content: `Extract the key terms from this contract:\n\n${textToSend}` 
-          }
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: ContractSchema
-        },
-      });
-      
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error("No response from OpenAI");
-      }
-      
-      const parsed = JSON.parse(content) as { extractions: Extraction[] };
-      modelExtractions = parsed.extractions;
-      inputTokens = response.usage?.prompt_tokens || 0;
-      outputTokens = response.usage?.completion_tokens || 0;
+    const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nExtract these ${fieldsNeedingExtraction.length} fields:\n\n${termsPrompt}`;
+    
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: dynamicPrompt },
+        { 
+          role: "user", 
+          content: `Extract the key terms from this contract document:\n\n${textToSend}` 
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: ContractSchema
+      },
+    });
+    
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
     }
+    
+    const parsed = JSON.parse(content) as { extractions: Extraction[] };
+    const modelExtractions = parsed.extractions;
+    const inputTokens = response.usage?.prompt_tokens || 0;
+    const outputTokens = response.usage?.completion_tokens || 0;
     
     // Combine auto-populated fields with model extractions
     const allExtractions = [...autoExtractions, ...modelExtractions];
