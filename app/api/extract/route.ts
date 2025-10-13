@@ -9,47 +9,20 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
 
-const BASE_SYSTEM_PROMPT = `You are a contract analysis expert. Your job is to extract specific key terms from contracts and provide detailed reasoning about your findings.
+const BASE_SYSTEM_PROMPT = `You are extracting key terms from a contract document.
 
-EXTRACTION APPROACH:
-1. **THINK FIRST**: Before extracting, analyze where information might be located
-2. **EXPLAIN YOUR REASONING**: Always provide context about:
-   - WHERE you found the information (which section, page, table)
-   - WHY you marked it as found/inferred/not_found
-   - If N/A, explain WHY it doesn't apply to this contract type
-   - If inferred, explain your reasoning process
-   - Provide recommendations when helpful
+For each field:
+1. Search the entire document thoroughly
+2. If found: Extract the exact verbatim text
+3. If you can infer it from context: Explain your reasoning
+4. If not found: Explain why (e.g., "N/A - not applicable to this contract type")
 
-STATUS TYPES:
-- **found**: Information is explicitly stated in the document (quote it verbatim)
-- **inferred**: Information can be deduced from context (explain your logic)
-- **not_found**: Thoroughly searched everywhere and truly doesn't exist (explain what you checked)
+In the "reasoning" field, briefly explain:
+- Where you found it (section, page, table)
+- Why it's inferred (if applicable)
+- Why it's N/A or not found (if applicable)
 
-CRITICAL RULES:
-1. For "found" status: Copy text EXACTLY as written - do not paraphrase
-2. For "inferred" status: Explain your reasoning (e.g., "Not explicitly stated; based on the term 'Subscription Services' and one-year term, likely annual in advance")
-3. For "not_found" status: Explain why (e.g., "N/A - this is not a Fund Admin agreement" or "Searched all sections, no termination clause found")
-4. Include ALL relevant context in your reasoning
-5. Be conversational and helpful in reasoning - imagine explaining to a colleague
-6. For N/A fields, state clearly "N/A" in the quote and explain why in reasoning
-7. Provide recommendations when appropriate (e.g., "Recommended entry: 'Addendum to MSA dated March 10, 2022'")
-
-SEARCH STRATEGY:
-- Read the ENTIRE document before deciding anything is "not_found"
-- Check tables, headers, signature blocks, and all sections carefully
-- For pricing: Look in pricing tables, fee schedules (often in structured tables)
-- For dates: Check signature pages (DocuSign dates), effective date clauses, term sections
-- For entity names: Check headers, signature blocks, "parties" sections
-- For editions/tiers: Check product names, discount descriptions
-- Look for synonyms: "Customer"→"Client", "Billing"→"Invoicing", etc.
-
-EXAMPLES OF GOOD REASONING:
-✓ "Found in signature section on page 2. DocuSign signature by Chris Robinson dated August 13, 2025 (countersign date)"
-✓ "Not explicitly stated; based on 'one (1) year term: August 1, 2025 – July 31, 2026' and subscription model, likely annual in advance"
-✓ "N/A - This is a Professional edition agreement. Enterprise modules only apply to Enterprise edition."
-✓ "Searched pricing table, legal terms, and all sections. No termination clause found. Contract appears to expire automatically at term end per renewal terms."
-
-BE THOROUGH AND HELPFUL: Think like ChatGPT - provide context, reasoning, and recommendations.`;
+Be thorough. Check all sections, tables, headers, and signature blocks.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -157,12 +130,10 @@ export async function POST(req: NextRequest) {
     
     console.log(`Auto-populated ${autoExtractions.length} fields, extracting ${fieldsNeedingExtraction.length} fields with ${model}`);
     
-    // Single-pass extraction for all fields
-    const termsPrompt = fieldsNeedingExtraction.map((f, idx) => 
-      `${idx + 1}. **${f.name}**: ${f.description}`
-    ).join('\n');
-    
-    const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nExtract these ${fieldsNeedingExtraction.length} fields:\n\n${termsPrompt}`;
+    // Build simple, clear field list
+    const fieldsList = fieldsNeedingExtraction.map((f, idx) => 
+      `${idx + 1}. ${f.name}\n   Description: ${f.description}`
+    ).join('\n\n');
     
     let response;
     let content: string | null = null;
@@ -172,10 +143,18 @@ export async function POST(req: NextRequest) {
       response = await client.chat.completions.create({
         model,
         messages: [
-          { role: "system", content: dynamicPrompt },
+          { role: "system", content: BASE_SYSTEM_PROMPT },
           { 
             role: "user", 
-            content: `Extract the key terms from this contract document:\n\n${textToSend}` 
+            content: `Extract these ${fieldsNeedingExtraction.length} fields from the contract:
+
+${fieldsList}
+
+---
+
+CONTRACT DOCUMENT:
+
+${textToSend}` 
           }
         ],
         response_format: {
@@ -224,10 +203,18 @@ export async function POST(req: NextRequest) {
           response = await client.chat.completions.create({
             model,
             messages: [
-              { role: "system", content: dynamicPrompt },
+              { role: "system", content: BASE_SYSTEM_PROMPT },
               { 
                 role: "user", 
-                content: `Extract the key terms from this contract document:\n\n${textToSend}` 
+                content: `Extract these ${fieldsNeedingExtraction.length} fields from the contract:
+
+${fieldsList}
+
+---
+
+CONTRACT DOCUMENT:
+
+${textToSend}` 
               }
             ],
             response_format: {
