@@ -25,7 +25,8 @@ type UploadCardProps = {
 };
 
 const MODELS = [
-  { value: "gpt-4o", label: "gpt-4o (best for extraction)" },
+  { value: "gpt-5", label: "gpt-5 (latest, best quality)" },
+  { value: "gpt-4o", label: "gpt-4o (reliable)" },
   { value: "o3-mini", label: "o3-mini (reasoning)" },
   { value: "gpt-4o-mini", label: "gpt-4o-mini (fast, cheap)" },
 ];
@@ -50,7 +51,7 @@ export default function UploadCard({
   logs,
 }: UploadCardProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [model, setModel] = useState("gpt-4o");
+  const [model, setModel] = useState("gpt-5");
   const [isDragging, setIsDragging] = useState(false);
   const [customFields, setCustomFields] = useState<KeyTermField[]>(DEFAULT_FIELDS);
   const [newFieldName, setNewFieldName] = useState("");

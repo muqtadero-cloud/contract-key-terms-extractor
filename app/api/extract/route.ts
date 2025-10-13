@@ -73,14 +73,14 @@ export async function POST(req: NextRequest) {
     
     console.log(`Extracted ${fullText.length} characters from ${parsedDoc.pageCount || 'unknown'} pages`);
     
-    // Truncate if too long (GPT-4o has 128k context, ~100k chars to be safe)
+    // Truncate if too long (128k context for most models, ~100k chars to be safe)
     const maxChars = 100000;
     const textToSend = fullText.length > maxChars 
       ? fullText.substring(0, maxChars) + "\n\n[Document truncated due to length]"
       : fullText;
     
     const client = getOpenAIClient();
-    const model = modelParam || "gpt-4o";
+    const model = modelParam || "gpt-5";
     
     // Build dynamic prompt with field descriptions
     const fieldsToExtract = customFields || [
@@ -158,7 +158,8 @@ export async function POST(req: NextRequest) {
     // Calculate usage and cost
     const totalTokens = inputTokens + outputTokens;
 
-    // GPT-4o pricing: $2.50 per 1M input tokens, $10 per 1M output tokens
+    // Pricing (adjust based on model): GPT-4o: $2.50 per 1M input, $10 per 1M output
+    // Using GPT-4o pricing as baseline estimate for now
     const estimatedUSD = (inputTokens * 2.5 / 1000000) + (outputTokens * 10 / 1000000);
 
     const usage = {
