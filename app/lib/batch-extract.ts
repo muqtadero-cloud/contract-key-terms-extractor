@@ -9,10 +9,16 @@ CRITICAL RULES:
 1. Copy text EXACTLY as written - do not paraphrase, summarize, or rewrite
 2. Include ALL relevant sentences and clauses for each term
 3. If a term spans multiple sentences or paragraphs, include the complete section
-4. If a term is not found, mark status as "not_found"
-5. Be thorough - err on the side of including more context rather than less
-6. Search the ENTIRE document for each field - don't give up early
-7. For fields related to specific sections (like "Software Terms" or "Fund Administration"), look for those section headers`;
+4. BE AGGRESSIVE - Search the ENTIRE document thoroughly for each field
+5. Look for information in multiple places - headers, tables, signature blocks, service descriptions
+6. For dates, check signature pages, effective date sections, and service period sections
+7. For pricing, check all tables and pricing sections carefully
+8. If information is IMPLIED or can be INFERRED from context, extract it and note the inference
+9. Only mark as "not_found" if you've thoroughly searched everywhere and the information truly doesn't exist
+10. Check for common synonyms - "Customer" might be "Client", "Billing" might be "Invoicing", etc.
+11. For order forms/SOWs, pricing information is usually in tables - examine ALL tables carefully
+12. Service start/end dates are often in "Term" or "Service Period" sections
+13. Edition/tier information might be in product names or discount descriptions`;
 
 // Create a dynamic schema for a batch of fields
 function createBatchSchema(fields: KeyTermField[]) {
@@ -98,7 +104,20 @@ Focus on finding these ${fields.length} specific fields:
 
 ${termsPrompt}
 
-IMPORTANT: Search the entire document carefully for each field. If you find relevant information, extract the complete, verbatim text.`;
+SEARCH STRATEGY:
+- Read the ENTIRE document before deciding anything is "not_found"
+- Check tables, headers, signature blocks, and all sections
+- For pricing fields: Look in pricing tables, fee schedules, and payment sections
+- For dates: Check signature pages, effective date clauses, and term sections
+- For entity names: Check headers, signature blocks, and "parties" sections
+- For terms/conditions: Check legal terms, invoicing terms, and renewal sections
+
+CONFIDENCE SCORING:
+- Set confidence to 0.8-1.0 if information is explicitly stated
+- Set confidence to 0.5-0.7 if information is inferred from context or synonyms
+- Set confidence to 0.0 only if truly not found after thorough search
+
+BE THOROUGH: Your goal is to find as much information as possible. When in doubt, extract it.`;
 
   const schema = createBatchSchema(fields);
   

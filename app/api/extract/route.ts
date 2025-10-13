@@ -93,23 +93,53 @@ export async function POST(req: NextRequest) {
       { name: "Payment", description: "Payment terms, schedules, amounts, invoicing procedures" }
     ];
     
+    // Pre-populate fields that can be automatically determined
+    const autoExtractions: Extraction[] = [];
+    const fieldsNeedingExtraction: KeyTermField[] = [];
+    
+    fieldsToExtract.forEach(field => {
+      const fieldNameLower = field.name.toLowerCase();
+      
+      // Auto-populate Source File from filename
+      if (fieldNameLower.includes('source file') || fieldNameLower.includes('file name')) {
+        autoExtractions.push({
+          field: field.name,
+          status: "found",
+          quote: file.name,
+          page: null,
+          start: null,
+          end: null,
+          confidence: 1.0
+        });
+      }
+      // Auto-default Currency to USD if field asks for it and mentions default
+      else if (fieldNameLower.includes('currency') && field.description.toLowerCase().includes('default') && field.description.toLowerCase().includes('usd')) {
+        // Don't auto-populate currency, let the model find it or infer it
+        fieldsNeedingExtraction.push(field);
+      }
+      else {
+        fieldsNeedingExtraction.push(field);
+      }
+    });
+    
+    console.log(`Auto-populated ${autoExtractions.length} fields, extracting ${fieldsNeedingExtraction.length} fields`);
     console.log(`Sending to ${model}...`);
     
     // Use batched extraction for better accuracy with many fields
-    const shouldUseBatching = fieldsToExtract.length > 10;
-    let allExtractions: Extraction[];
+    const shouldUseBatching = fieldsNeedingExtraction.length > 10;
+    let modelExtractions: Extraction[];
     let inputTokens = 0;
     let outputTokens = 0;
     
     if (shouldUseBatching) {
-      console.log(`Using batched extraction for ${fieldsToExtract.length} fields (batches of 8)`);
-      const batchResult = await batchedExtract(client, model, textToSend, fieldsToExtract, 8);
-      allExtractions = batchResult.extractions;
+      console.log(`Using batched extraction for ${fieldsNeedingExtraction.length} fields (batches of 7)`);
+      const batchResult = await batchedExtract(client, model, textToSend, fieldsNeedingExtraction, 7);
+      modelExtractions = batchResult.extractions;
       inputTokens = batchResult.inputTokens;
       outputTokens = batchResult.outputTokens;
     } else {
-      console.log(`Using single-pass extraction for ${fieldsToExtract.length} fields`);
-      const termsPrompt = fieldsToExtract.map(f => `- ${f.name}: ${f.description}`).join('\n');
+      console.log(`Using single-pass extraction for ${fieldsNeedingExtraction.length} fields`);
+      const termsPrompt = fieldsNeedingExtraction.map(f => `- ${f.name}: ${f.description}`).join('\n');
       const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nTerms to extract:\n${termsPrompt}`;
       
       const response = await client.chat.completions.create({
@@ -133,10 +163,13 @@ export async function POST(req: NextRequest) {
       }
       
       const parsed = JSON.parse(content) as { extractions: Extraction[] };
-      allExtractions = parsed.extractions;
+      modelExtractions = parsed.extractions;
       inputTokens = response.usage?.prompt_tokens || 0;
       outputTokens = response.usage?.completion_tokens || 0;
     }
+    
+    // Combine auto-populated fields with model extractions
+    const allExtractions = [...autoExtractions, ...modelExtractions];
     
     console.log("Received response from OpenAI");
 
