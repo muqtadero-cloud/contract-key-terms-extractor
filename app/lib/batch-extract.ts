@@ -37,16 +37,25 @@ function createBatchSchema(fields: KeyTermField[]) {
           description: `The exact verbatim text from the document for "${field.name}". Empty string if not_found.`
         },
         page: {
-          type: "integer",
-          description: "Page number where this was found (if available), or 0 if not_found"
+          type: ["integer", "null"],
+          description: "Page number where this was found (if available), or null if not_found"
         },
-        relevance: {
-          type: "string",
-          enum: ["high", "medium", "low"],
-          description: "Confidence that this is the correct information"
+        start: {
+          type: ["integer", "null"],
+          description: "Character start position in document, or null if not_found"
+        },
+        end: {
+          type: ["integer", "null"],
+          description: "Character end position in document, or null if not_found"
+        },
+        confidence: {
+          type: "number",
+          minimum: 0,
+          maximum: 1,
+          description: "Confidence score from 0 to 1 that this is the correct information"
         }
       },
-      required: ["field", "status", "quote", "page", "relevance"]
+      required: ["field", "status", "quote", "page", "start", "end", "confidence"]
     };
   });
 
@@ -132,8 +141,10 @@ ${docText}`
         field: field.name, // Use original field name
         status: result.status,
         quote: result.quote || "",
-        page: result.page || 0,
-        relevance: result.relevance || "medium"
+        page: result.page ?? null,
+        start: result.start ?? null,
+        end: result.end ?? null,
+        confidence: result.confidence ?? 0.5
       });
     } else {
       // Fallback if field is missing from response
@@ -141,8 +152,10 @@ ${docText}`
         field: field.name,
         status: "not_found",
         quote: "",
-        page: 0,
-        relevance: "low"
+        page: null,
+        start: null,
+        end: null,
+        confidence: 0
       });
     }
   });
