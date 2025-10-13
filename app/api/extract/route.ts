@@ -125,7 +125,6 @@ export async function POST(req: NextRequest) {
           type: "json_schema",
           json_schema: ContractSchema
         },
-        temperature: 0.1,
       });
       
       const content = response.choices[0]?.message?.content;

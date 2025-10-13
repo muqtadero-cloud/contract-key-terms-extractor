@@ -120,7 +120,6 @@ ${docText}`
       type: "json_schema",
       json_schema: schema
     },
-    temperature: 0.1,
   });
   
   const content = response.choices[0]?.message?.content;
