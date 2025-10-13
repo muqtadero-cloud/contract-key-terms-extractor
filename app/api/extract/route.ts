@@ -97,7 +97,8 @@ export async function POST(req: NextRequest) {
       : fullText;
     
     const client = getOpenAIClient();
-    const model = modelParam || "gpt-5";
+    let model = modelParam || "gpt-5";
+    let usedFallback = false;
     
     // Build dynamic prompt with field descriptions
     const fieldsToExtract = customFields || [
@@ -148,30 +149,113 @@ export async function POST(req: NextRequest) {
     
     const dynamicPrompt = `${BASE_SYSTEM_PROMPT}\n\nExtract these ${fieldsNeedingExtraction.length} fields:\n\n${termsPrompt}`;
     
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: dynamicPrompt },
-        { 
-          role: "user", 
-          content: `Extract the key terms from this contract document:\n\n${textToSend}` 
-        }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: ContractSchema
-      },
-    });
+    let response;
+    let content: string | null = null;
+    let modelExtractions: Extraction[] = [];
     
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("No response from OpenAI");
+    try {
+      response = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: dynamicPrompt },
+          { 
+            role: "user", 
+            content: `Extract the key terms from this contract document:\n\n${textToSend}` 
+          }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: ContractSchema
+        },
+      });
+      
+      content = response.choices[0]?.message?.content;
+      
+      if (!content) {
+        throw new Error("No response content from OpenAI");
+      }
+      
+      // Try to parse the JSON response
+      try {
+        const parsed = JSON.parse(content) as { extractions: Extraction[] };
+        modelExtractions = parsed.extractions;
+      } catch (parseError) {
+        console.error("JSON parsing error:", parseError);
+        console.error("Response content:", content?.substring(0, 500));
+        
+        // If JSON parsing fails, create empty extractions for all fields
+        console.log("Falling back to empty extractions due to JSON parse error");
+        modelExtractions = fieldsNeedingExtraction.map(field => ({
+          field: field.name,
+          status: "not_found" as const,
+          quote: "",
+          page: null,
+          start: null,
+          end: null,
+          confidence: 0
+        }));
+      }
+    } catch (apiError: any) {
+      console.error("API error:", apiError);
+      
+      // If GPT-5 fails, try falling back to gpt-4o
+      if (model === "gpt-5" && apiError?.message?.includes("model")) {
+        console.log("GPT-5 failed, falling back to gpt-4o...");
+        model = "gpt-4o";
+        usedFallback = true;
+        
+        try {
+          response = await client.chat.completions.create({
+            model,
+            messages: [
+              { role: "system", content: dynamicPrompt },
+              { 
+                role: "user", 
+                content: `Extract the key terms from this contract document:\n\n${textToSend}` 
+              }
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: ContractSchema
+            },
+          });
+          
+          content = response.choices[0]?.message?.content;
+          if (content) {
+            const parsed = JSON.parse(content) as { extractions: Extraction[] };
+            modelExtractions = parsed.extractions;
+            console.log("Successfully extracted with gpt-4o fallback");
+          }
+        } catch (fallbackError) {
+          console.error("Fallback to gpt-4o also failed:", fallbackError);
+          // Create empty extractions
+          modelExtractions = fieldsNeedingExtraction.map(field => ({
+            field: field.name,
+            status: "not_found" as const,
+            quote: "",
+            page: null,
+            start: null,
+            end: null,
+            confidence: 0
+          }));
+        }
+      } else {
+        // If not a model error or already using fallback, create empty extractions
+        console.log("Falling back to empty extractions due to API error");
+        modelExtractions = fieldsNeedingExtraction.map(field => ({
+          field: field.name,
+          status: "not_found" as const,
+          quote: "",
+          page: null,
+          start: null,
+          end: null,
+          confidence: 0
+        }));
+      }
     }
     
-    const parsed = JSON.parse(content) as { extractions: Extraction[] };
-    const modelExtractions = parsed.extractions;
-    const inputTokens = response.usage?.prompt_tokens || 0;
-    const outputTokens = response.usage?.completion_tokens || 0;
+    const inputTokens = response?.usage?.prompt_tokens || 0;
+    const outputTokens = response?.usage?.completion_tokens || 0;
     
     // Combine auto-populated fields with model extractions
     const allExtractions = [...autoExtractions, ...modelExtractions];
@@ -213,6 +297,12 @@ export async function POST(req: NextRequest) {
     }
     if (validationReport.invalidCount > 0) {
       notes.push(`${validationReport.invalidCount} extraction(s) failed validation and were marked as not_found`);
+    }
+    if (modelExtractions.length > 0 && modelExtractions.every(e => e.status === "not_found")) {
+      notes.push("AI extraction encountered an error - please try again or check server logs");
+    }
+    if (usedFallback) {
+      notes.push("Used gpt-4o model (GPT-5 not yet available)");
     }
 
     const result: ApiResponse = {
